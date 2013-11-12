@@ -1,3 +1,6 @@
 [submodule "chef/cookbooks/ceph"]
-	path = chef/cookbooks/ceph
-	url = https://github.com/ceph/ceph-cookbooks.git
+        path = chef/cookbooks/ceph
+        url = https://github.com/VictorLowther/ceph-cookbooks.git
+[submodule "chef/cookbooks/apache2"]
+        path = chef/cookbooks/apache2
+        url = https://github.com/opscode-cookbooks/apache2.git
