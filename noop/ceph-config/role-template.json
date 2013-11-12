@@ -1,0 +1,7 @@
+{
+    "ceph": {
+        "config": {
+            "cluster_name": "ceph"
+        }
+    }
+}

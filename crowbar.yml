@@ -1,39 +1,81 @@
 barclamp:
   name: ceph
   display: Ceph
-  version: 0
-
+  license: "apache2"
+  copyright: "Dell, Inc 2013"
+  api_version: "v2"
+  api_version_accepts: "v2"
   os_support:
-    - ubuntu-10.10
-    - ubuntu-11.04
-    - ubuntu-11.10
     - ubuntu-12.04
 
 crowbar:
-  layout: 1
+  layout: 2.0
+
+roles:
+  - name: ceph-config
+    jig: noop
+    requires:
+      - network-ceph
+      - crowbar-installed-node
+    flags:
+      - implicit
+      - cluster
+  - name: ceph-mon
+    jig: chef
+    requires:
+      - ceph-config
+    flags:
+      - cluster
+      - server
+  - name: ceph-osd
+    jig: chef
+    requires:
+      - ceph-config
+      - ceph-mon
+  - name: ceph-radosgw
+    jig: chef
+    requires:
+      - ceph-config
+      - ceph-mon
+      - ceph-osd
+  - name: ceph-mds
+    jig: chef
+    requires:
+      - ceph-config
+      - ceph-mon
+      - ceph-osd
+  - name: ceph-client
+    jig: chef
+    requires:
+      - ceph-config
+      - ceph-mon
+      - ceph-osd
 
 # TODO crowbar *and* chef cookbooks don't really need -dbg
 debs:
-  ubuntu-10.10:
-    repos:
-      - deb http://ceph.com/debian/ maverick main
-  ubuntu-11.04:
-    repos:
-      - deb http://ceph.com/debian/ natty main
-  ubuntu-11.10:
-    repos:
-      - deb http://ceph.com/debian/ oneiric main
   ubuntu-12.04:
     repos:
-      - deb http://www.ceph.com/debian-argonaut precise main
+      # Base Ceph packages
+      - deb http://www.ceph.com/debian-dumpling precise main
+      # Fixed Apache FastCGI for radosgw support
+      - deb http://gitbuilder.ceph.com/libapache-mod-fastcgi-deb-precise-x86_64-basic/ref/master precise main
   pkgs:
     - ceph
     - ceph-dbg
     - ceph-common
     - ceph-common-dbg
+    - ceph-test
+    - ceph-mds
+    - ceph-fs-common
+    - radosgw
+    - radosgw-agent
     - libcephfs1
     - gdisk
+    - cryptsetup
     - libgoogle-perftools0
+    # Apache stuff
+    - apache2
+    - libapache2-mod-fastcgi
 
 locale_additions:
   en:
