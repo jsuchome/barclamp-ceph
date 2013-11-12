@@ -1,7 +1,6 @@
 raise "fsid must be set in config" if node["ceph"]["config"]['fsid'].nil?
-raise "mon_initial_members must be set in config" if node["ceph"]["config"]['mon_initial_members'].nil?
 
-mon_addresses = get_mon_addresses()
+mons = node["ceph"]["monitors"]
 
 is_rgw = false
 if node['roles'].include? 'ceph-radosgw'
@@ -18,7 +17,7 @@ end
 template '/etc/ceph/ceph.conf' do
   source 'ceph.conf.erb'
   variables(
-    :mon_addresses => mon_addresses,
+    :mons => mons,
     :is_rgw => is_rgw
   )
   mode '0644'

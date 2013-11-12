@@ -23,12 +23,12 @@ when "debian"
     radosgw
   }
 
-  if node['ceph']['install_debug']
-    packages_dbg = %w{
-      radosgw-dbg
-    }
-    packages += packages_dbg
-  end
+  #if node['ceph']['install_debug']
+  #  packages_dbg = %w{
+  #    radosgw-dbg
+  #  }
+  #  packages += packages_dbg
+  #end
 when "rhel","fedora","suse"
   packages = %w{
     ceph-radosgw
@@ -43,39 +43,36 @@ end
 
 include_recipe "ceph::conf"
 
-unless File.exists?("/var/lib/ceph/radosgw/ceph-radosgw.#{node['hostname']}/done")
-  if node["ceph"]["radosgw"]["webserver_companion"]
-    include_recipe "ceph::radosgw_#{node["ceph"]["radosgw"]["webserver_companion"]}"
-  end
+radosgw_keyring = "/etc/ceph/ceph.client.radosgw.#{node['hostname']}.keyring"
+if node["ceph"]["radosgw"]["webserver_companion"]
+  include_recipe "ceph::radosgw_#{node["ceph"]["radosgw"]["webserver_companion"]}"
+end
 
-  ruby_block "create rados gateway client key" do
-    block do
-      keyring = %x[ ceph auth get-or-create client.radosgw.#{node['hostname']} osd 'allow rwx' mon 'allow rw' --name mon. --key='#{node["ceph"]["monitor-secret"]}' ]
-      keyfile = File.new("/etc/ceph/ceph.client.radosgw.#{node['hostname']}.keyring", "w")
-      keyfile.puts(keyring)
-      keyfile.close
+ruby_block "create rados gateway client key" do
+  block do
+    keyring = %x[ ceph auth get-or-create client.radosgw.#{node['hostname']} osd 'allow rwx' mon 'allow rw' --name client.admin --key='#{node["ceph"]["admin"]}' ]
+    File.open(radosgw_keyring,"w") do |f|
+      f.puts(keyring)
     end
   end
+  not_if do File.exists?(radosgw_keyring) end
+end
+file "/var/lib/ceph/radosgw/ceph-radosgw.#{node['hostname']}/done" do
+  action :create
+end
 
-  file "/var/lib/ceph/radosgw/ceph-radosgw.#{node['hostname']}/done" do
-    action :create
-  end
-
-  service "radosgw" do
-    case node["ceph"]["radosgw"]["init_style"]
-    when "upstart"
-      service_name "radosgw-all-starter"
-      provider Chef::Provider::Service::Upstart
+service "radosgw" do
+  case node["ceph"]["radosgw"]["init_style"]
+  when "upstart"
+    service_name "radosgw-all-starter"
+    provider Chef::Provider::Service::Upstart
+  else
+    if node['platform'] == "debian"
+      service_name "radosgw"
     else
-      if node['platform'] == "debian"
-        service_name "radosgw"
-      else
-        service_name "ceph-radosgw"
-      end
+      service_name "ceph-radosgw"
     end
-    supports :restart => true
-    action [ :enable, :start ]
   end
-else
-  Log.info("Rados Gateway already deployed")
+  supports :restart => true
+  action [ :enable, :start ]
 end

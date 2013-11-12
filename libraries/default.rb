@@ -2,19 +2,16 @@ require 'ipaddr'
 require 'json'
 
 def is_crowbar?()
-  return defined?(Chef::Recipe::Barclamp) != nil
+  !!node["crowbar"]
+end
+
+def cluster_name
+  node["ceph"]["config"]["cluster_name"] || "ceph" rescue "ceph"
 end
 
 def get_mon_nodes(extra_search=nil)
-  if is_crowbar?
-    mon_roles = search(:role, 'name:crowbar-* AND run_list:role\[ceph-mon\]')
-    if not mon_roles.empty?
-      search_string = mon_roles.map { |role_object| "roles:"+role_object.name }.join(' OR ')
-      search_string = "(#{search_string}) AND ceph_config_environment:#{node['ceph']['config']['environment']}"
-    end
-  else
-    search_string = "role:ceph-mon AND chef_environment:#{node.chef_environment}"
-  end
+  return node["ceph"]["monitors"].keys.map{|n|Chef::Node.load(n)} if is_crowbar?
+  search_string = "roles:ceph-mon AND chef_environment:#{node.chef_environment}"
 
   if not extra_search.nil?
     search_string = "(#{search_string}) AND (#{extra_search})"
@@ -79,7 +76,7 @@ def get_mon_addresses()
 
     mons += get_mon_nodes()
     if is_crowbar?
-      mon_ips = mons.map { |node| Chef::Recipe::Barclamp::Inventory.get_network_by_type(node, "admin").address }
+      mon_ips = mons.map { |n| node.address("ceph").addr }
     else
       if node['ceph']['config']['global'] && node['ceph']['config']['global']['public network']
         mon_ips = mons.map { |nodeish| find_node_ip_in_network(node['ceph']['config']['global']['public network'], nodeish) }

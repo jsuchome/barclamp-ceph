@@ -36,31 +36,32 @@ directory "/var/lib/ceph/mon/ceph-#{node["hostname"]}" do
 end
 
 # TODO cluster name
-cluster = 'ceph'
+cluster = cluster_name
 
-unless File.exists?("/var/lib/ceph/mon/ceph-#{node["hostname"]}/done")
-  keyring = "#{Chef::Config[:file_cache_path]}/#{cluster}-#{node['hostname']}.mon.keyring"
+keyring = "#{Chef::Config[:file_cache_path]}/#{cluster}-#{node['hostname']}.mon.keyring"
 
-  monitor_secret = if node['ceph']['encrypted_data_bags']
-    secret = Chef::EncryptedDataBagItem.load_secret(node["ceph"]["mon"]["secret_file"])
-    Chef::EncryptedDataBagItem.load("ceph", "mon", secret)["secret"]
-  else
-    node["ceph"]["monitor-secret"]
-  end
+monitor_secret = if node['ceph']['encrypted_data_bags']
+                   secret = Chef::EncryptedDataBagItem.load_secret(node["ceph"]["mon"]["secret_file"])
+                   Chef::EncryptedDataBagItem.load("ceph", "mon", secret)["secret"]
+                 else
+                   node["ceph"]["monitor-secret"]
+                 end
 
-  execute "format as keyring" do
-    command "ceph-authtool '#{keyring}' --create-keyring --name=mon. --add-key='#{monitor_secret}' --cap mon 'allow *'"
-    creates "#{Chef::Config[:file_cache_path]}/#{cluster}-#{node['hostname']}.mon.keyring"
-  end
+execute "format as keyring" do
+  command "ceph-authtool '#{keyring}' --create-keyring --name=mon. --add-key='#{monitor_secret}' --cap mon 'allow *'"
+  creates keyring
+  not_if do File.exists?(keyring) end
+end
 
+unless File.directory?("/var/lib/ceph/mon/#{cluster}-#{node['hostname']}/store.db")
   execute 'ceph-mon mkfs' do
-    command "ceph-mon --mkfs -i #{node['hostname']} --keyring '#{keyring}'"
+    command "ceph-mon --mkfs -i #{node['hostname']} --keyring '#{keyring}' --public-addr [#{node.address("ceph",IP::IP6).addr}]:6789"
   end
 
   ruby_block "finalise" do
     block do
       ["done", service_type].each do |ack|
-        File.open("/var/lib/ceph/mon/ceph-#{node["hostname"]}/#{ack}", "w").close()
+        File.open("/var/lib/ceph/mon/#{cluster}-#{node["hostname"]}/#{ack}", "w").close()
       end
     end
   end
@@ -90,27 +91,26 @@ service "ceph_mon" do
   action [ :enable, :start ]
 end
 
-get_mon_addresses().each do |addr|
-  execute "peer #{addr}" do
-    command "ceph --admin-daemon '/var/run/ceph/ceph-mon.#{node['hostname']}.asok' add_bootstrap_peer_hint #{addr}"
+get_mon_nodes.each do |mon|
+  addr = mon.address("ceph",IP::IP6).addr
+    execute "peer #{addr}" do
+    command "ceph --admin-daemon '/var/run/ceph/#{cluster}-mon.#{node['hostname']}.asok' add_bootstrap_peer_hint #{addr}"
     ignore_failure true
   end
 end
 
-# The key is going to be automatically
-# created,
-# We store it when it is created
-unless node['ceph']['encrypted_data_bags']
-  ruby_block "get osd-bootstrap keyring" do
+# Now that the mons have established quorum (hopefully), get our keys.
+["admin", "bootstrap-mds", "bootstrap-osd"].each do |key|
+  ruby_block "get #{key} keyring" do
     block do
       run_out = ""
       while run_out.empty?
-        run_out = Mixlib::ShellOut.new("ceph auth get-key client.bootstrap-osd").run_command.stdout.strip
+        run_out = Mixlib::ShellOut.new("ceph auth get-or-create-key client.#{key}").run_command.stdout.strip
         sleep 2
       end
-      node.override['ceph']['bootstrap_osd_key'] = run_out
+      node.normal['ceph'][key] = run_out
       node.save
     end
-    not_if { node['ceph']['bootstrap_osd_key'] }
+    not_if { node['ceph'][key] }
   end
 end
