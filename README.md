@@ -2,7 +2,7 @@
 
 The first workload for Crowbar 2.0 is Ceph, a fully distributed block
 store, object store, and POSIX filesystem.  Ceph is designed to have
-no single points of failure, and uses a unique algorithim called RADOS
+no single points of failure, and uses a unique algorithim called CRUSH
 to manage data placement in the storage cluster.
 
 ## Design of the Barclamp ##
