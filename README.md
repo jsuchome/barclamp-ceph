@@ -39,6 +39,7 @@ the following steps:
         git clone https://github.com/VictorLowther/barclamp-ceph.git barclamps/ceph
         cd barclamps/ceph
         git submodule update --init
+        git checkout master
 
    This will check out the apache2 and ceph cookbooks that the Ceph
    barclamp requires. The apache2 cookbook comes straight from
