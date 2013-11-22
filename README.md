@@ -29,7 +29,7 @@ the following steps:
 
 1. At the top level Crowbar directory, run the following command:
 
-        echo master > releases/development/master/barclamp-crowbar
+        echo master > releases/development/master/barclamp-ceph
 
    This will tell the Crowbar build system that you want Ceph to be a
    part of the development/master build.  Normally, you would create a
