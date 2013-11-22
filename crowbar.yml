@@ -21,31 +21,31 @@ roles:
       - implicit
       - cluster
   - name: ceph-mon
-    jig: chef
+    jig: chef-solo$
     requires:
       - ceph-config
     flags:
       - cluster
       - server
   - name: ceph-osd
-    jig: chef
+    jig: chef-solo$
     requires:
       - ceph-config
       - ceph-mon
   - name: ceph-radosgw
-    jig: chef
+    jig: chef-solo$
     requires:
       - ceph-config
       - ceph-mon
       - ceph-osd
   - name: ceph-mds
-    jig: chef
+    jig: chef-solo$
     requires:
       - ceph-config
       - ceph-mon
       - ceph-osd
   - name: ceph-client
-    jig: chef
+    jig: chef-solo$
     requires:
       - ceph-config
       - ceph-mon
