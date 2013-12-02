@@ -88,6 +88,24 @@ def get_mon_addresses()
   return mon_ips.uniq
 end
 
+def get_all_mon_addresses()
+  res = {}
+  if is_crowbar?
+    node["ceph"]["monitors"].each_value do |v|
+      res[v["name"]]=v["address"]
+    end
+  else
+    get_mon_nodes.each do |n|
+      if n['ceph']['config']['global'] && n['ceph']['config']['global']['public network']
+        res[n["hostname"]] = find_node_ip_in_network(n['ceph']['config']['global']['public network'], n)
+      else
+        res[n["hostname"]] = n['ipaddress'] + ":6789"
+      end
+    end
+  end
+  res
+end
+
 def get_quorum_members_ips()
   mon_ips = []
   mon_status = %x[ceph --admin-daemon /var/run/ceph/ceph-mon.#{node['hostname']}.asok mon_status]

@@ -91,9 +91,8 @@ service "ceph_mon" do
   action [ :enable, :start ]
 end
 
-get_mon_nodes.each do |mon|
-  addr = mon.address("ceph",IP::IP6).addr
-    execute "peer #{addr}" do
+get_all_mon_addresses.each do |mon,addr|
+  execute "peer #{addr}" do
     command "ceph --admin-daemon '/var/run/ceph/#{cluster}-mon.#{node['hostname']}.asok' add_bootstrap_peer_hint #{addr}"
     ignore_failure true
   end
@@ -109,7 +108,6 @@ end
         sleep 2
       end
       node.normal['ceph'][key] = run_out
-      node.save
     end
     not_if { node['ceph'][key] }
   end

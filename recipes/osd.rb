@@ -43,12 +43,6 @@ package 'cryptsetup' do
 end
 
 service_type = node["ceph"]["osd"]["init_style"]
-mons = get_mon_nodes
-
-if mons.empty? then
-  Chef::Log.fatal "No ceph-mon found."
-  return
-end
 
 directory "/var/lib/ceph/bootstrap-osd" do
   owner "root"
