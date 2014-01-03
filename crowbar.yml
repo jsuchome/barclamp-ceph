@@ -33,7 +33,6 @@ roles:
       - ceph-config
     flags:
       - cluster
-      - server
     attribs:
       - name: ceph-mon_secret
         description: "The secret key that Ceph monitors will use to identify each other."
