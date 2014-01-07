@@ -21,6 +21,9 @@ roles:
       - implicit
       - cluster
     attribs:
+      - name: ceph-config-all
+        description: "All global Ceph configuration"
+        map: 'ceph/config'
       - name: ceph-fs_uuid
         description: 'The UUID of the Ceph filesystem this cluster will manage'
         map: 'ceph/config/fsid'
@@ -33,7 +36,6 @@ roles:
       - ceph-config
     flags:
       - cluster
-      - server
     attribs:
       - name: ceph-mon_secret
         description: "The secret key that Ceph monitors will use to identify each other."
@@ -50,19 +52,33 @@ roles:
       - name: ceph-osd-key
         description: 'The secret key used to bootstrap Ceph OSD services'
         map: 'ceph/bootstrap-osd'
+    wants-attribs:
+      - ceph-config-all
   - name: ceph-osd
     jig: chef-solo
     requires:
       - ceph-config
       - ceph-mon
+    wants-attribs:
+      - ceph-config-all
+      - ceph-osd-key
+      - ceph-mon-nodes
   - name: ceph-radosgw
     jig: chef-solo
+    wants-attribs:
+      - ceph-config-all
+      - ceph-admin-key
+      - ceph-mon-nodes
     requires:
       - ceph-config
       - ceph-mon
       - ceph-osd
   - name: ceph-mds
     jig: chef-solo
+    wants-attribs:
+      - ceph-config-all
+      - ceph-mds-key
+      - ceph-mon-nodes
     requires:
       - ceph-config
       - ceph-mon
