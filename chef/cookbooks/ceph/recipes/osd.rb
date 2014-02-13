@@ -82,38 +82,12 @@ need_start = false
 if is_crowbar?
   ruby_block "select new disks for ceph osd" do
     block do
-      do_trigger = false
-      # Find all disks that do not have any partitions, holders, or filesystems on them.
-      targets = Hash.new
-      ignore = Hash.new
-      Dir.glob("/sys/class/block/*").each do |ent|
-        # We only want symlinks
-        next unless File.symlink?(ent)
-        link = File.readlink(ent).split("/")
-        # No virtual or platform devices.
-        next if link.include?("virtual") || link.include?("platform")
-        # If it is a USB anything, ignore it.
-        next if ent =~ /usb/
-        # No removable devices
-        next if File.exists?(File.join(ent,"removable")) && (IO.read(File.join(ent,"removable")).strip == "1")
-        # No devices that have holders or slaves.
-        next unless Dir.glob(File.join(ent,"*/holders")).empty?
-        next unless Dir.glob(File.join(ent,"*/slaves")).empty?
-        # Arrange to ignore any devices with partitions.
-        if link[-3] == "block"
-          ignore[link[-2]] = true
-          next
-        end
-        # If blkid sees anything on it, ignore it.
-        next unless %x{blkid -o value -s TYPE /dev/#{link[-1]}}.strip.empty?
-        targets[link[-1]] = true
-      end
-      # We have a tenative list of targets. Prepare the ones that are not ignored.
-      targets.each_key do |disk|
-        next if ignore[disk]
+      node.disks.each do |name,disk|
+        next unless disk["available"] && !node.reserved_disk?(name) && !disk["usb"]
+        next unless node.reserve_disk(name,"ceph-osd")
         need_start = true
-        Chef::Log.info("Ceph OSD: Preparing with #{prepare} /dev/#{disk}")
-        system "#{prepare} /dev/#{disk}"
+        Chef::Log.info("Ceph OSD: Preparing with #{prepare} /dev/#{name}")
+        system "#{prepare} /dev/#{name}"
       end
     end
   end
