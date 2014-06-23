@@ -104,14 +104,31 @@ else
     #  - $cluster should always be ceph
     #  - The --dmcrypt option will be available starting w/ Cuttlefish
     unless disk_list.empty?
+      journal_device  = ""
+      # In the first iteration, check if there are any SSD disks claimed:
+      # if so, it will be used as journal device
+      # TODO add some option if user wants to do this automatically
+      node["ceph"]["osd_devices"].each_with_index do |osd_device,index|
+        cmd = "cat /sys/block/#{osd_device['device'].gsub("/dev/", "")}/queue/rotational"
+        ssd_check = Mixlib::ShellOut.new(c).run_command.stdout.strip
+        if ssd_check == "0"
+          Log.info("osd: osd_device #{osd_device} is SSD")
+          journal_device = osd_device['device']
+          node["ceph"]["osd_devices"][index]["journal"] = true
+        end
+      end
+
       osd_devices = []
       node["ceph"]["osd_devices"].each_with_index do |osd_device,index|
         if !osd_device["status"].nil?
           Log.info("osd: osd_device #{osd_device} has already been setup.")
           next
         end
-        create_cmd = "ceph-disk prepare --cluster #{cluster} --zap-disk #{osd_device['device']}"
-
+        if osd_device["journal"]
+          Log.info("osd: osd_device #{osd_device} will be used for journal")
+          next
+        end
+        create_cmd = "ceph-disk prepare --cluster #{cluster} --zap-disk #{osd_device['device']} #{journal_device}"
         if %w(redhat centos).include? node.platform
           # redhat has buggy udev so we have to use workaround from ceph
           b_dev = osd_device['device'].gsub("/dev/", "")
