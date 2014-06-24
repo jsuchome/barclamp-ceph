@@ -104,17 +104,16 @@ else
     #  - $cluster should always be ceph
     #  - The --dmcrypt option will be available starting w/ Cuttlefish
     unless disk_list.empty?
-      journal_device  = ""
+      journal_device = ""
       # In the first iteration, check if there are any SSD disks claimed:
       # if so, it will be used as journal device
       # TODO add some option if user wants to do this automatically
       node["ceph"]["osd_devices"].each_with_index do |osd_device,index|
-        cmd = "cat /sys/block/#{osd_device['device'].gsub("/dev/", "")}/queue/rotational"
-        ssd_check = Mixlib::ShellOut.new(c).run_command.stdout.strip
-        if ssd_check == "0"
-          Log.info("osd: osd_device #{osd_device} is SSD")
-          journal_device = osd_device['device']
+        dev_name = osd_device['device'].gsub("/dev/", "")
+        if node[:block_device][dev_name]["rotational"] == "0"
+          Log.info("osd: osd_device #{osd_device} is likely SSD: could be used for journal")
           node["ceph"]["osd_devices"][index]["journal"] = true
+          journal_device = osd_device['device']
         end
       end
 
@@ -125,7 +124,7 @@ else
           next
         end
         if osd_device["journal"]
-          Log.info("osd: osd_device #{osd_device} will be used for journal")
+          Log.info("osd: osd_device #{osd_device} is for journal, skipping prepare")
           next
         end
         create_cmd = "ceph-disk prepare --cluster #{cluster} --zap-disk #{osd_device['device']} #{journal_device}"
