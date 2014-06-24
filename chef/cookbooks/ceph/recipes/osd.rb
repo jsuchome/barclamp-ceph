@@ -151,6 +151,7 @@ else
           end
         end
         node.set["ceph"]["osd_devices"][index]["status"] = "deployed"
+        node.set["ceph"]["osd_devices"][index]["journal"] = journal_device unless journal_device.empty?
 
         execute "Writing Ceph OSD device mappings to fstab" do
           command "tail -n1 /etc/mtab >> /etc/fstab"
