@@ -34,6 +34,10 @@ class CephService < ServiceObject
         "ceph-osd" => {
           "unique" => false,
           "count" => 8
+        },
+        "ceph-radosgw" => {
+          "unique" => false,
+          "count" => 1
         }
       }
     end
@@ -65,6 +69,7 @@ class CephService < ServiceObject
     base["deployment"]["ceph"]["elements"] = {
         "ceph-mon" => controller_nodes.map { |x| x.name },
         "ceph-osd" => storage_nodes.map{ |x| x.name },
+        "ceph-radosgw" => [ controller_nodes.first.name ]
     } unless storage_nodes.nil?
 
     @logger.debug("Ceph create_proposal: exiting")
@@ -116,6 +121,7 @@ class CephService < ServiceObject
     validate_at_least_n_for_role proposal, "ceph-mon", 1
     validate_count_as_odd_for_role proposal, "ceph-mon"
     validate_at_least_n_for_role proposal, "ceph-osd", 2
+    validate_one_for_role proposal, "ceph-radosgw"
 
     osd_nodes = proposal["deployment"]["ceph"]["elements"]["ceph-osd"] || []
 
