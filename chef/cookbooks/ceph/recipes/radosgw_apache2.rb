@@ -1,9 +1,5 @@
-# now including radosgw_apache2.rb code:
-
 # TODO possibly include code from radosgw_apache2_repo.rb (debian only)
 
-# packages from upstream attributes/radosgw_apache2.rb
-# TODO merge with packages in the recipe above
 packages = []
 case node['platform_family']
   when 'debian'
@@ -45,7 +41,14 @@ service 'apache2' do
   action :restart
 end
 
-template '/var/www/s3gw.fcgi' do
+directory node['ceph']['radosgw']['path'] do
+  owner node[:apache][:user]
+  group node[:apache][:group]
+  mode "0755"
+  action :create
+end
+
+template node['ceph']['radosgw']['path'] + '/s3gw.fcgi' do
   source 's3gw.fcgi.erb'
   owner 'root'
   group 'root'

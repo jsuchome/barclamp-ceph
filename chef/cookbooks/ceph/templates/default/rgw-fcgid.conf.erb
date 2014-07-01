@@ -6,7 +6,7 @@
 <%   end -%>
 <% end -%>
   ServerAdmin <%= node["ceph"]["radosgw"]["admin_email"] %>
-  DocumentRoot /var/www/
+  DocumentRoot <%= node['ceph']['radosgw']['path'] %>
 
   #turn engine on
   RewriteEngine On
@@ -15,13 +15,12 @@
   RewriteRule ^/([a-zA-Z0-9-_.]*)([/]?.*) /s3gw.fcgi?page=$1&params=$2&%{QUERY_STRING} [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},L]
 
   <IfModule mod_fcgid.c>
-    SuexecUserGroup web1 web1
-    PHP_Fix_Pathinfo_Enable 1
-    <Directory /var/www/>
+    SuexecUserGroup  wwwrun www
+    <Directory <%= node['ceph']['radosgw']['path'] %>>
       Options +ExecCGI
       AllowOverride All
       SetHandler fcgid-script
-      FCGIWrapper /var/www/ .fcgi
+      FCGIWrapper  <%= node['ceph']['radosgw']['path'] %> .fcgi
       Order allow,deny
       Allow from all
       AuthBasicAuthoritative Off
