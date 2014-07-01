@@ -42,15 +42,13 @@ end
 
 template '/etc/ceph/ceph.conf' do
   source 'ceph.conf.erb'
-  variables {
-    {
+  variables(
     :mon_initial => mon_init,
     :mon_addresses => mon_addresses,
     :public_network => public_network,
     :cluster_network => cluster_network,
-    :is_rgw => node['ceph']['is_radosgw']
-    }
-  }
+    :is_rgw => node.roles.include?("ceph-radosgw")
+  )
   mode '0644'
 end
 

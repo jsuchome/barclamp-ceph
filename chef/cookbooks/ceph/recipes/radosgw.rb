@@ -5,17 +5,25 @@ node['ceph']['radosgw']['packages'].each do |pck|
   package pck
 end
 
-# now including upstream radosgw.rb code:
-node.default['ceph']['is_radosgw'] = true
 hostname = node['hostname']
+
+directory "/var/run/ceph-radosgw" do
+  owner node[:apache][:user]
+  group node[:apache][:group]
+end
+
+file "/var/log/ceph/radosgw.log" do
+  owner node[:apache][:user]
+  group node[:apache][:group]
+end
 
 if !::File.exist?("/var/lib/ceph/radosgw/ceph-radosgw.#{hostname}/done")
 
   include_recipe "ceph::radosgw_apache2"
 
-#FIXME ceph_client provider not available
   ceph_client 'radosgw' do
     caps('mon' => 'allow rw', 'osd' => 'allow rwx')
+    group "www"
   end
 
   directory "/var/lib/ceph/radosgw/ceph-radosgw.#{hostname}" do
@@ -27,17 +35,7 @@ if !::File.exist?("/var/lib/ceph/radosgw/ceph-radosgw.#{hostname}/done")
   end
 
   service 'radosgw' do
-    case node['ceph']['radosgw']['init_style']
-    when 'upstart'
-      service_name 'radosgw-all-starter'
-      provider Chef::Provider::Service::Upstart
-    else
-      if node['platform'] == 'debian'
-        service_name 'radosgw'
-      else
-        service_name 'ceph-radosgw'
-      end
-    end
+    service_name node['ceph']['radosgw']['service_name']
     supports :restart => true
     action [:enable, :start]
   end
