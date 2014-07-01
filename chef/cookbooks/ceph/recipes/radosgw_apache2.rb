@@ -6,10 +6,12 @@
 # TODO merge with packages in the recipe above
 packages = []
 case node['platform_family']
-  when 'debian', 'suse'
+  when 'debian'
     packages = ['libapache2-mod-fastcgi']
   when 'rhel', 'fedora'
     packages = ['mod_fastcgi']
+  when 'suse'
+    packages = ['apache2-mod_fcgid']
 end
 
 packages.each do |pkg|
@@ -20,16 +22,20 @@ end
 
 include_recipe 'apache2'
 
-apache_module 'fastcgi' do
-  conf true
-end
+#apache_module 'fastcgi' do
+#  conf true
+#end
+
+#apache_module 'fcgid' do
+#  conf true
+#end
 
 apache_module 'rewrite' do
   conf false
 end
 
 web_app 'rgw' do
-  template 'rgw.conf.erb'
+  template 'rgw-fcgid.conf.erb'
   server_name node['ceph']['radosgw']['api_fqdn']
   admin_email node['ceph']['radosgw']['admin_email']
   ceph_rgw_addr node['ceph']['radosgw']['rgw_addr']

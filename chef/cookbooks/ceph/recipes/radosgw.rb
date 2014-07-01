@@ -5,12 +5,15 @@ node['ceph']['radosgw']['packages'].each do |pck|
   package pck
 end
 
+# now including upstream radosgw.rb code:
+node.default['ceph']['is_radosgw'] = true
 hostname = node['hostname']
 
 if !::File.exist?("/var/lib/ceph/radosgw/ceph-radosgw.#{hostname}/done")
 
   include_recipe "ceph::radosgw_apache2"
 
+#FIXME ceph_client provider not available
   ceph_client 'radosgw' do
     caps('mon' => 'allow rw', 'osd' => 'allow rwx')
   end
