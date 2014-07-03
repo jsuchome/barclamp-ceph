@@ -38,13 +38,9 @@ end
 
 include_recipe 'apache2'
 
-#apache_module 'fastcgi' do
-#  conf true
-#end
-
-#apache_module 'fcgid' do
-#  conf true
-#end
+apache_module 'fastcgi' do
+  conf true
+end
 
 apache_module 'rewrite' do
   conf false
