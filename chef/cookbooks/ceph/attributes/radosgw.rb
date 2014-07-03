@@ -20,7 +20,6 @@
 default['ceph']['radosgw']['api_fqdn'] = 'localhost'
 default['ceph']['radosgw']['admin_email'] = 'admin@example.com'
 default['ceph']['radosgw']['rgw_addr'] = '*:80'
-default['ceph']['radosgw']['rgw_port'] = false
 
 default["ceph"]["radosgw"]["path"] = "/var/www"
 
@@ -28,12 +27,11 @@ if node['platform'] == "suse"
   default["ceph"]["radosgw"]["path"] = "/srv/www/ceph-radosgw"
 end
 
-case node['platform']
-when 'ubuntu'
-  default["ceph"]["radosgw"]["init_style"] = "upstart"
-else
-  default["ceph"]["radosgw"]["init_style"] = "sysvinit"
-end
+default['ceph']['radosgw']['service_name'] = value_for_platform(
+  ['ubuntu'] => 'radosgw-all-starter',
+  ['debian'] => 'radosgw',
+  'default' => 'ceph-radosgw'
+)
 
 case node['platform_family']
   when 'debian'
