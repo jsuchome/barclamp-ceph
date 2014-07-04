@@ -51,6 +51,8 @@ class CephService < ServiceObject
       base["attributes"]["ceph"]["config"]["fsid"] = generate_uuid
     end
 
+    base["attributes"][@bc_name]["keystone_instance"] = find_dep_proposal("keystone", true)
+
     nodes        = NodeObject.all
     nodes.delete_if { |n| n.nil? or n.admin? }
 

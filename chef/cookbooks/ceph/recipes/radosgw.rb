@@ -44,9 +44,6 @@ else
 end
 
 # check if keystone is deployed (not a requirement for ceph)
-
-keystone_nodes = search_env_filtered(:node, "roles:keystone-server)
-
-unless keystone_nodes.empty?
+if node[:ceph][:keystone_instance]
   include_recipe "ceph::radosgw_keystone"
 end
