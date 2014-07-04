@@ -3,6 +3,14 @@
 # Keystone itself needs to be configured to point to the Ceph Object Gateway as an object-storage endpoint:
 keystone_settings = KeystoneHelper.keystone_settings(node, @cookbook_name)
 
+keystone_register "radosgw wakeup keystone" do
+  protocol keystone_settings['protocol']
+  host keystone_settings['internal_url_host']
+  port keystone_settings['admin_port']
+  token keystone_settings['admin_token']
+  action :wakeup
+end
+
 # keystone service-create --name swift --type object-store
 keystone_register "register swift service" do
   protocol keystone_settings['protocol']
@@ -24,7 +32,7 @@ ha_enabled      = false
 my_admin_host = CrowbarHelper.get_host_for_admin_url(node, ha_enabled)
 my_public_host = CrowbarHelper.get_host_for_public_url(node, protocol == "https", ha_enabled)
 
-keystone_register "register radowgw endpoint" do
+keystone_register "register radosgw endpoint" do
     protocol keystone_settings['protocol']
     host keystone_settings['internal_url_host']
     token keystone_settings['admin_token']
