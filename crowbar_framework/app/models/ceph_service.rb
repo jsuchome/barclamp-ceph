@@ -43,6 +43,15 @@ class CephService < ServiceObject
     end
   end
 
+  def proposal_dependencies(role)
+    answer = []
+    if role.default_attributes[@bc_name]["keystone_instance"]
+      answer << { "barclamp" => "keystone", "inst" => role.default_attributes[@bc_name]["keystone_instance"] }
+    end
+    answer
+  end
+
+
   def create_proposal
     @logger.debug("Ceph create_proposal: entering")
     base = super
