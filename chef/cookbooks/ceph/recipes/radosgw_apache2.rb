@@ -27,7 +27,7 @@ case node['platform_family']
   when 'rhel', 'fedora'
     packages = ['mod_fastcgi']
   when 'suse'
-    packages = ['apache2-mod_fcgid']
+    packages = ['apache2-mod_fastcgi']
 end
 
 packages.each do |pkg|
