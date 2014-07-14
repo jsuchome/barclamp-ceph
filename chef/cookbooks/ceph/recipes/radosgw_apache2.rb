@@ -47,10 +47,7 @@ apache_module 'rewrite' do
 end
 
 web_app 'rgw' do
-  template 'rgw-fcgid.conf.erb'
-  server_name node['ceph']['radosgw']['api_fqdn']
-  admin_email node['ceph']['radosgw']['admin_email']
-  ceph_rgw_addr node['ceph']['radosgw']['rgw_addr']
+  template 'rgw.conf.erb'
 end
 
 service 'apache2' do
