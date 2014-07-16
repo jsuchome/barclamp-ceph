@@ -7,11 +7,6 @@ end
 
 hostname = node['hostname']
 
-directory "/var/run/ceph-radosgw" do
-  owner node[:apache][:user]
-  group node[:apache][:group]
-end
-
 file "/var/log/ceph/radosgw.log" do
   owner node[:apache][:user]
   group node[:apache][:group]
@@ -24,6 +19,10 @@ if !::File.exist?("/var/lib/ceph/radosgw/ceph-radosgw.#{hostname}/done")
   ceph_client 'radosgw' do
     caps('mon' => 'allow rw', 'osd' => 'allow rwx')
     group "www"
+  end
+
+  execute "add key capabilities" do
+    command "ceph-authtool -n client.radosgw.#{hostname} /etc/ceph/ceph.client.radosgw.#{hostname}.keyring --cap osd 'allow rwx' --cap mon 'allow rw'"
   end
 
   directory "/var/lib/ceph/radosgw/ceph-radosgw.#{hostname}" do
