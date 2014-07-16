@@ -1,3 +1,5 @@
+FastCgiExternalServer <%= node['ceph']['radosgw']['path'] %>/s3gw.fcgi -socket /var/run/ceph/radosgw.<%= node['hostname'] %>
+
 <VirtualHost <%= node['ceph']['radosgw']['rgw_addr'] %>>
   ServerName <%= node['hostname'] %>
 <% if node['ceph']['radosgw']['api_aliases'] -%>
@@ -24,7 +26,7 @@
 
   AllowEncodedSlashes On
 
-  ErrorLog /var/log/<%= node['apache']['package'] %>/error.log
-  CustomLog /var/log/<%= node['apache']['package'] %>/rgw-access.log proxy_combined
+  ErrorLog <%= node['apache']['log_dir'] %>/error.log
+  CustomLog <%= node['apache']['log_dir'] %>/rgw-access.log proxy_combined
   ServerSignature Off
 </VirtualHost>
