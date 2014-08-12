@@ -108,7 +108,7 @@ else
       # In the first iteration, check if there are any SSD disks claimed:
       # if so, it will be used as journal device
       # TODO add some option if user wants to do this automatically
-      node["ceph"]["osd_devices"].each_with_index do |osd_device,index|
+      node["ceph"]["osd_devices"].each_with_index do |osd_device,index| && journal_device.empty?
         dev_name = osd_device['device'].gsub("/dev/", "")
         if node[:block_device][dev_name]["rotational"] == "0"
           Log.info("osd: osd_device #{osd_device} is likely SSD: could be used for journal")
@@ -125,9 +125,11 @@ else
         end
         if osd_device["journal"]
           Log.info("osd: osd_device #{osd_device} is for journal, skipping prepare")
+          # TODO prepare the journal device now
           next
         end
-        create_cmd = "ceph-disk prepare --cluster #{cluster} --zap-disk #{osd_device['device']} #{journal_device}"
+        create_cmd = "ceph-disk prepare --cluster #{cluster} --zap-disk #{osd_device['device']}"
+        create_cmd = create_cmd + " --journal-dev #{journal_device}" unless journal_device.empty?
         if %w(redhat centos).include? node.platform
           # redhat has buggy udev so we have to use workaround from ceph
           b_dev = osd_device['device'].gsub("/dev/", "")
