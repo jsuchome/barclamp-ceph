@@ -1,5 +1,10 @@
-Chef cookbook for deploying the Ceph storage system
+Chef cookbook for deploying the Ceph storage with Crowbar
 ===================================================
+
+This chef cookbook is adopted and maintaned to deploy Ceph storage with Crowbar.
+
+The best way to deploy this cookbook is use whole Crowbar barclamp with following 
+example:
 
 Note: "knife cookbook upload" needs this directory to be named "ceph".
 Please clone the repository as
