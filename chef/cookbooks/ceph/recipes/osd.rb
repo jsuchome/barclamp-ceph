@@ -87,7 +87,14 @@ else
     disk_list.select do |d|
       if d.claim("Ceph")
         Chef::Log.info("Ceph: Claimed #{d.name}")
-        node["ceph"]["osd_devices"].push("device" => d.name)
+        device = {}
+        dev_name = d.name.gsub("/dev/", "")
+        if node[:block_device][dev_name]["rotational"] == "0"
+          Chef::Log.info("Ceph: Mark #{d.name} as SSD disk")
+          device["status"] = "journal"
+        end
+        device["device"] = d.name
+        node["ceph"]["osd_devices"].push(device)
         node.save
       else
         Chef::Log.info("Ceph: Ignoring #{d.name}")
@@ -104,32 +111,19 @@ else
     #  - $cluster should always be ceph
     #  - The --dmcrypt option will be available starting w/ Cuttlefish
     unless disk_list.empty?
-      journal_device = ""
-      # In the first iteration, check if there are any SSD disks claimed:
-      # if so, it will be used as journal device
-      # TODO add some option if user wants to do this automatically
-      node["ceph"]["osd_devices"].each_with_index do |osd_device,index| && journal_device.empty?
-        dev_name = osd_device['device'].gsub("/dev/", "")
-        if node[:block_device][dev_name]["rotational"] == "0"
-          Log.info("osd: osd_device #{osd_device} is likely SSD: could be used for journal")
-          node["ceph"]["osd_devices"][index]["journal"] = true
-          journal_device = osd_device['device']
-        end
-      end
-
+      ssd_devices = node["ceph"]["osd_devices"].select { |d| d["status"] == "journal" }
       osd_devices = []
       node["ceph"]["osd_devices"].each_with_index do |osd_device,index|
         if !osd_device["status"].nil?
-          Log.info("osd: osd_device #{osd_device} has already been setup.")
+          Log.info("osd: osd_device #{osd_device['device']} has already been set up.")
           next
         end
-        if osd_device["journal"]
-          Log.info("osd: osd_device #{osd_device} is for journal, skipping prepare")
-          # TODO prepare the journal device now
-          next
+        create_cmd = "ceph-disk prepare --cluster #{cluster} --journal-dev --zap-disk #{osd_device['device']}"
+        unless ssd_devices.empty?
+          ssd_device = ssd_devices[index]['device'] rescue ssd_devices.last['device']
+          create_cmd = create_cmd + " #{ssd_device}" if ssd_device
         end
-        create_cmd = "ceph-disk prepare --cluster #{cluster} --zap-disk #{osd_device['device']}"
-        create_cmd = create_cmd + " --journal-dev #{journal_device}" unless journal_device.empty?
+
         if %w(redhat centos).include? node.platform
           # redhat has buggy udev so we have to use workaround from ceph
           b_dev = osd_device['device'].gsub("/dev/", "")
@@ -153,7 +147,7 @@ else
           end
         end
         node.set["ceph"]["osd_devices"][index]["status"] = "deployed"
-        node.set["ceph"]["osd_devices"][index]["journal"] = journal_device unless journal_device.empty?
+        node.set["ceph"]["osd_devices"][index]["journal"] = ssd_device unless ssd_device.nil?
 
         execute "Writing Ceph OSD device mappings to fstab" do
           command "tail -n1 /etc/mtab >> /etc/fstab"
