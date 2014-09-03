@@ -173,3 +173,31 @@ def mon_secret
 
   monitor_key
 end
+
+def add_ssd_part(device)
+  sgdisk_lst = Mixlib::ShellOut.new("sgdisk -p #{device}")
+  sgdisk_out = sgdisk_lst.run_command.stdout
+  sgdisk_lst.error!
+  ssd_ptable = []
+
+  sgdisk_out.each do |line|
+    if /\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S)+ \S+B\s+\S+\s+(.*)/.match(line)
+      ssd_part = {}
+      ssd_part['part_number'] = $1
+      ssd_part['sec_start'] = $2
+      ssd_part['sec_end'] = $3
+      ssd_part['part_size'] = $4
+      ssd_ptable.push(ssd_part)
+    end
+  end
+  
+  num = ssd_ptable.length
+  sec = ssd_ptable[num - 1]['sec_end']
+  pnum = num + 1
+
+  sgdisk_new = Mixlib::ShellOut.new("sgdisk --new=#{pnum}:#{sec}:+10G --change-name=#{pnum}:\"ceph journal #{pnum}\" --randomize-guids #{device}")
+  sgdisk_out = sgdisk_new.run_command.stdout
+  sgdisk_new.error!
+  
+  "#{device}" + "#{pnum}"
+end
