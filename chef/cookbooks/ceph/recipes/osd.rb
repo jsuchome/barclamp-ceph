@@ -76,6 +76,12 @@ else
         raise "There is no suitable disks for ceph"
       else
         disk_list = [unclaimed_disks.first]
+        # Check if there is also unclaimed SSD disk (for the journal)
+        ssd_disk = unclaimed_disks.find do |d|
+          dev_name = d.name.gsub("/dev/", "")
+          node[:block_device][dev_name]["rotational"] == "0"
+        end
+        disk_list.push ssd_disk if ssd_disk
       end
     elsif node["ceph"]["disk_mode"] == "all"
       disk_list = unclaimed_disks
