@@ -118,6 +118,7 @@ else
     #  - The --dmcrypt option will be available starting w/ Cuttlefish
     unless disk_list.empty?
       ssd_devices = node["ceph"]["osd_devices"].select { |d| d["status"] == "journal" }
+      ssd_index = 0
       osd_devices = []
       node["ceph"]["osd_devices"].each_with_index do |osd_device,index|
         if !osd_device["status"].nil?
@@ -126,8 +127,15 @@ else
         end
         create_cmd = "ceph-disk prepare --cluster #{cluster} --journal-dev --zap-disk #{osd_device['device']}"
         unless ssd_devices.empty?
-          ssd_device = ssd_devices[index]['device'] rescue ssd_devices.last['device']
-          create_cmd = create_cmd + " #{ssd_device}" if ssd_device
+          ssd_device = ssd_devices[ssd_index]
+          while journal_device.nil? && ssd_device
+            journal_device = add_ssd_part(ssd_device, ssd_index + 1 < ssd_devices.size)
+            if journal_device.nil?
+              ssd_index += 1
+              ssd_device = ssd_devices[ssd_index]
+            end
+          end
+          create_cmd = create_cmd + " #{journal_device}" if journal_device
         end
 
         if %w(redhat centos).include? node.platform
@@ -153,7 +161,7 @@ else
           end
         end
         node.set["ceph"]["osd_devices"][index]["status"] = "deployed"
-        node.set["ceph"]["osd_devices"][index]["journal"] = ssd_device unless ssd_device.nil?
+        node.set["ceph"]["osd_devices"][index]["journal"] = journal_device unless journal_device.nil?
 
         execute "Writing Ceph OSD device mappings to fstab" do
           command "tail -n1 /etc/mtab >> /etc/fstab"
