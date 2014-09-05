@@ -75,12 +75,19 @@ else
         Chef::Log.fatal("There is no suitable disks for ceph")
         raise "There is no suitable disks for ceph"
       else
-        disk_list = [unclaimed_disks.first]
-        # Check if there is also unclaimed SSD disk (for the journal)
-        ssd_disk = unclaimed_disks.find do |d|
-          dev_name = d.name.gsub("/dev/", "")
-          node[:block_device][dev_name]["rotational"] == "0"
+        # take first available disk and also first unclaimed SSD disk (if present)
+        disk_list       = []
+        non_ssd_disk    = nil
+        ssd_disk        = nil
+        unclaimed_disks.each do |d|
+          is_ssd        = node[:block_device][d.name.gsub("/dev/", "")]["rotational"] == "0"
+          if is_ssd_disk && ssd_disk.nil?
+            ssd_disk = d
+          elsif !is_ssd_disk && non_ssd_disk.nil?
+            non_ssd_disk = d
+          end
         end
+        disk_list.push non_ssd_disk if non_ssd_disk
         disk_list.push ssd_disk if ssd_disk
       end
     elsif node["ceph"]["disk_mode"] == "all"
