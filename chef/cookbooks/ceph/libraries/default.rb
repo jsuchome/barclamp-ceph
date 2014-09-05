@@ -174,10 +174,10 @@ def mon_secret
   monitor_key
 end
 
-# Create new partition on SSD disk that will serve for journal
+# Create new partition on given disk that will serve for journal
 # return nil if there are already 4 partitions on this disk and we have other SSD to use
 # (Perfomance recommendation to have max 4 journals per one SSD)
-def add_ssd_part(device,next_ssd_available)
+def add_journal_partition(device,next_ssd_available)
   sgdisk_lst = Mixlib::ShellOut.new("sgdisk -p #{device}")
   sgdisk_out = sgdisk_lst.run_command.stdout
   sgdisk_lst.error!
@@ -202,7 +202,7 @@ def add_ssd_part(device,next_ssd_available)
     return nil
   end
 
-  size = node['ceph']['config']['osd']['journal_size'] rescue 5120
+  size = node['ceph']['osd']['journal_size']
 
   sgdisk_new = Mixlib::ShellOut.new("sgdisk --new=#{pnum}:#{sec}:+#{size}M --change-name=#{pnum}:\"ceph journal #{pnum}\" --randomize-guids #{device}")
   sgdisk_out = sgdisk_new.run_command.stdout

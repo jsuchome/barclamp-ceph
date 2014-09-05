@@ -129,7 +129,7 @@ else
         unless ssd_devices.empty?
           ssd_device = ssd_devices[ssd_index]
           while journal_device.nil? && ssd_device
-            journal_device = add_ssd_part(ssd_device, ssd_index + 1 < ssd_devices.size)
+            journal_device = add_journal_partition(ssd_device, ssd_index + 1 < ssd_devices.size)
             if journal_device.nil?
               ssd_index += 1
               ssd_device = ssd_devices[ssd_index]
