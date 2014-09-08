@@ -175,9 +175,7 @@ def mon_secret
 end
 
 # Create new partition on given disk that will serve for journal
-# return nil if there are already 4 partitions on this disk and we have other SSD to use
-# (Perfomance recommendation to have max 4 journals per one SSD)
-def add_journal_partition(device,next_ssd_available)
+def add_journal_partition(device)
   sgdisk_lst = Mixlib::ShellOut.new("sgdisk -p #{device}")
   sgdisk_out = sgdisk_lst.run_command.stdout
   sgdisk_lst.error!
@@ -197,10 +195,6 @@ def add_journal_partition(device,next_ssd_available)
   num = ssd_ptable.length
   sec = ssd_ptable.last['sec_end'] rescue 0
   pnum = num + 1
-
-  if next_ssd_available && num > 3
-    return nil
-  end
 
   size = node['ceph']['osd']['journal_size']
 

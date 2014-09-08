@@ -70,6 +70,7 @@ else
   if is_crowbar?
     node["ceph"]["osd_devices"] = [] if node["ceph"]["osd_devices"].nil?
     unclaimed_disks = BarclampLibrary::Barclamp::Inventory::Disk.unclaimed(node).sort
+
     if node["ceph"]["disk_mode"] == "first" && node["ceph"]["osd_devices"].empty?
       if unclaimed_disks.empty?
         Chef::Log.fatal("There is no suitable disks for ceph")
@@ -125,8 +126,9 @@ else
     #  - The --dmcrypt option will be available starting w/ Cuttlefish
     unless disk_list.empty?
       ssd_devices = node["ceph"]["osd_devices"].select { |d| d["status"] == "journal" }
-      ssd_index = 0
-      osd_devices = []
+      partitions_per_ssd = (disk_list.size - ssd_devices.size) / ssd_devices.size
+      ssd_index         = 0
+      ssd_partitions    = 1
       node["ceph"]["osd_devices"].each_with_index do |osd_device,index|
         if !osd_device["status"].nil?
           Log.info("osd: osd_device #{osd_device['device']} has already been set up.")
@@ -134,15 +136,15 @@ else
         end
         create_cmd = "ceph-disk prepare --cluster #{cluster} --journal-dev --zap-disk #{osd_device['device']}"
         unless ssd_devices.empty?
-          ssd_device = ssd_devices[ssd_index]
-          while journal_device.nil? && ssd_device
-            journal_device = add_journal_partition(ssd_device, ssd_index + 1 < ssd_devices.size)
-            if journal_device.nil?
-              ssd_index += 1
-              ssd_device = ssd_devices[ssd_index]
-            end
+          ssd_device            = ssd_devices[ssd_index]
+          journal_device        = add_journal_partition(ssd_device)
+          create_cmd            = create_cmd + " #{journal_device}" if journal_device
+          # move to next fee SSD if number of partitions on current one is too big
+          ssd_partitions        = ssd_partitions + 1
+          if ssd_partitions > partitions_per_ssd && ssd_devices[ssd_index+1]
+            ssd_partitions      = 0
+            ssd_index           = ssd_index + 1
           end
-          create_cmd = create_cmd + " #{journal_device}" if journal_device
         end
 
         if %w(redhat centos).include? node.platform
