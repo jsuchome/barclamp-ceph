@@ -198,7 +198,11 @@ def add_journal_partition(device)
 
   size = node['ceph']['osd']['journal_size']
 
-  sgdisk_new = Mixlib::ShellOut.new("sgdisk --new=#{pnum}:#{sec}:+#{size}M --change-name=#{pnum}:\"ceph journal #{pnum}\" --randomize-guids #{device}")
+  # This partition type is used by udev to find all journals
+  # For more information please look into /usr/sbin/ceph-disk 
+  journal_uuid = '45b0969e-9b03-4f30-b4c6-b4b80ceff106'
+
+  sgdisk_new = Mixlib::ShellOut.new("sgdisk --new=#{pnum}:#{sec}:+#{size}M --change-name=#{pnum}:\"ceph journal #{pnum}\" --randomize-guids #{device} --typecode=#{pnum}:#{journal_uuid}")
   sgdisk_out = sgdisk_new.run_command.stdout
   sgdisk_new.error!
   
